@@ -1,2 +1,6 @@
 *.out
 *.zip
+*.cmp
+*.tst
+/.idea/
+/projects/06/HackAssembler/.idea/
