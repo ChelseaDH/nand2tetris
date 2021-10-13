@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -9,10 +11,16 @@ import (
 )
 
 func Parse(line string) (command.Command, error) {
-	parts := strings.Split(strings.TrimSpace(line), " ")
+	comment, err := regexp.Compile(`//.*`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	parts := strings.Split(strings.TrimSpace(comment.ReplaceAllString(line, "")), " ")
 	commandName := parts[0]
+
 	switch commandName {
-	case "//", "":
+	case "":
 		return nil, nil
 
 	case "push", "pop":
