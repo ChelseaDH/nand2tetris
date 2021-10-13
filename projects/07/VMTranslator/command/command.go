@@ -1,6 +1,9 @@
 package command
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Command interface {
 	Type() CommandType
@@ -21,10 +24,13 @@ const (
 	Not
 	Pop
 	Push
+	Label
+	Goto
+	IfGoto
 )
 
 func (t CommandType) String() string {
-	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push"}
+	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto"}
 	if int(t) >= len(names) || int(t) < 0 {
 		return ""
 	}
@@ -89,7 +95,7 @@ func (m MemoryAccessCommand) String() string {
 }
 
 func ToCommandType(s string) CommandType {
-	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push"}
+	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto"}
 	for i := range names {
 		if names[i] == s {
 			return CommandType(i)
@@ -108,4 +114,13 @@ func ToSegment(s string) Segment {
 	}
 
 	return -1
+}
+
+type BranchingCommand struct {
+	RawCommand
+	Label string
+}
+
+func (b *BranchingCommand) String() string {
+	return fmt.Sprintf("%s %s", b.RawCommand.String(), strings.ToUpper(b.Label))
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/ChelseaDH/VMTranslator/command"
 )
@@ -56,6 +57,21 @@ func (t *Translator) Translate(c command.Command) error {
 	case command.Push:
 		mac := c.(*command.MemoryAccessCommand)
 		return t.translatePush(mac)
+
+	case command.Label:
+		bc := c.(*command.BranchingCommand)
+		t.addLabel(bc)
+		return nil
+
+	case command.Goto:
+		bc := c.(*command.BranchingCommand)
+		t.unconditionalGoto(bc)
+		return nil
+
+	case command.IfGoto:
+		bc := c.(*command.BranchingCommand)
+		t.conditionalGoto(bc)
+		return nil
 
 	default:
 		return fmt.Errorf("translation not yet implemented for command of type %s", c.Type())
@@ -184,4 +200,16 @@ func (t *Translator) decrementSP() {
 func (t *Translator) jump(jumpType string) {
 	t.write(fmt.Sprintf("@TRUE%d\nD;%s\nD=0\n@FALSE%d\n0;JMP\n(TRUE%d)\nD=-1\n(FALSE%d)\n", t.jumpCount, jumpType, t.jumpCount, t.jumpCount, t.jumpCount))
 	t.jumpCount++
+}
+
+func (t *Translator) addLabel(bc *command.BranchingCommand) {
+	t.write(fmt.Sprintf("(%s)\n", strings.ToUpper(bc.Label)))
+}
+
+func (t *Translator) unconditionalGoto(bc *command.BranchingCommand) {
+	t.write(fmt.Sprintf("@%s\n0;JMP\n", strings.ToUpper(bc.Label)))
+}
+
+func (t *Translator) conditionalGoto(bc *command.BranchingCommand) {
+	t.write(fmt.Sprintf("@SP\nAM=M-1\nD=M\n@%s\nD;JNE\n", strings.ToUpper(bc.Label)))
 }

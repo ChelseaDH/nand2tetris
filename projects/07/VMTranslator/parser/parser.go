@@ -51,6 +51,18 @@ func Parse(line string) (command.Command, error) {
 			Index:      index,
 		}, nil
 
+	case "label", "goto", "if-goto":
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("%s command must have 1 arguments", commandName)
+		}
+
+		rawCommand := command.RawCommand{Typ: command.ToCommandType(commandName)}
+
+		return &command.BranchingCommand{
+			RawCommand: rawCommand,
+			Label:      parts[1],
+		}, nil
+
 	default:
 		commandType := command.ToCommandType(commandName)
 		if commandType == -1 {
