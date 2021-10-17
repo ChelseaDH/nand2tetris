@@ -12,9 +12,11 @@ import (
 const tempIndex = 5
 
 type Translator struct {
-	Namespace string
-	Output    io.Writer
-	jumpCount int
+	Output      io.Writer
+	Namespace   string
+	currentFunc string
+	jumpCount   int
+	returnCount int
 }
 
 func (t *Translator) Translate(c command.Command) error {
@@ -22,25 +24,32 @@ func (t *Translator) Translate(c command.Command) error {
 
 	switch c.Type() {
 	case command.Add:
-		return t.translateBinaryExpression("+", "")
+		t.translateBinaryExpression("+", "")
+		return nil
 
 	case command.Sub:
-		return t.translateBinaryExpression("-", "")
+		t.translateBinaryExpression("-", "")
+		return nil
 
 	case command.Eq:
-		return t.translateBinaryExpression("-", "JEQ")
+		t.translateBinaryExpression("-", "JEQ")
+		return nil
 
 	case command.Gt:
-		return t.translateBinaryExpression("-", "JGT")
+		t.translateBinaryExpression("-", "JGT")
+		return nil
 
 	case command.Lt:
-		return t.translateBinaryExpression("-", "JLT")
+		t.translateBinaryExpression("-", "JLT")
+		return nil
 
 	case command.And:
-		return t.translateBinaryExpression("&", "")
+		t.translateBinaryExpression("&", "")
+		return nil
 
 	case command.Or:
-		return t.translateBinaryExpression("|", "")
+		t.translateBinaryExpression("|", "")
+		return nil
 
 	case command.Neg:
 		t.translateUnaryExpression("-")
@@ -73,6 +82,21 @@ func (t *Translator) Translate(c command.Command) error {
 		t.conditionalGoto(bc)
 		return nil
 
+	case command.Function:
+		fc := c.(*command.FunctionCommand)
+		t.currentFunc = fc.Name
+		t.defineFunction(fc)
+		return nil
+
+	case command.Call:
+		fc := c.(*command.FunctionCommand)
+		t.callFunction(fc)
+		return nil
+
+	case command.Return:
+		t.translateReturn()
+		return nil
+
 	default:
 		return fmt.Errorf("translation not yet implemented for command of type %s", c.Type())
 	}
@@ -89,22 +113,24 @@ func (t *Translator) Terminate() {
 	t.write("(END)\n@END\n0;JMP\n")
 }
 
-func (t *Translator) translateBinaryExpression(operator string, jump string) error {
-	err := t.translatePop(&command.MemoryAccessCommand{
-		RawCommand: command.RawCommand{Typ: command.Pop},
-		Segment:    command.Temp,
-		Index:      0,
+func (t *Translator) Initialise() error {
+	t.write("// Initialising stack pointer\n@256\nD=A\n@SP\nM=D\n")
+	return t.Translate(&command.FunctionCommand{
+		RawCommand: command.RawCommand{Typ: command.Call},
+		Name:       "Sys.init",
+		Args:       0,
 	})
-	if err != nil {
-		return err
-	}
+}
 
-	t.write(fmt.Sprintf("@SP\nA=M-1\nD=M\n@%d\nD=D%sM\n", tempIndex, operator))
+func (t *Translator) translateBinaryExpression(operator string, jump string) {
+	t.popStackIntoD()
+	t.write("@temp\nM=D\n")
+
+	t.write(fmt.Sprintf("@SP\nA=M-1\nD=M\n@temp\nD=D%sM\n", operator))
 	if jump != "" {
 		t.jump(jump)
 	}
 	t.write("@SP\nA=M-1\nM=D\n")
-	return nil
 }
 
 func (t *Translator) translateUnaryExpression(operator string) {
@@ -140,7 +166,7 @@ func (t *Translator) translatePop(c *command.MemoryAccessCommand) error {
 		return fmt.Errorf("%s is not a valid segment type for pop", c.Segment.String())
 	}
 
-	t.decrementSP()
+	t.popStackIntoD()
 	t.write(fmt.Sprintf("@%s\nM=D\n", loc))
 	return nil
 }
@@ -184,17 +210,12 @@ func (t *Translator) translatePush(c *command.MemoryAccessCommand) error {
 	}
 
 	t.write(fmt.Sprintf("@%s\nD=%s\n", loc, d))
-	t.write("@SP\nA=M\nM=D\n")
-	t.incrementSP()
+	t.pushDOntoStack()
 	return nil
 }
 
 func (t *Translator) incrementSP() {
 	t.write("@SP\nM=M+1\n")
-}
-
-func (t *Translator) decrementSP() {
-	t.write("@SP\nAM=M-1\nD=M\n")
 }
 
 func (t *Translator) jump(jumpType string) {
@@ -203,13 +224,91 @@ func (t *Translator) jump(jumpType string) {
 }
 
 func (t *Translator) addLabel(bc *command.BranchingCommand) {
-	t.write(fmt.Sprintf("(%s)\n", strings.ToUpper(bc.Label)))
+	t.write(fmt.Sprintf("(%s$%s)\n", t.currentFunc, strings.ToUpper(bc.Label)))
 }
 
 func (t *Translator) unconditionalGoto(bc *command.BranchingCommand) {
-	t.write(fmt.Sprintf("@%s\n0;JMP\n", strings.ToUpper(bc.Label)))
+	t.write(fmt.Sprintf("@%s$%s\n0;JMP\n", t.currentFunc, strings.ToUpper(bc.Label)))
 }
 
 func (t *Translator) conditionalGoto(bc *command.BranchingCommand) {
-	t.write(fmt.Sprintf("@SP\nAM=M-1\nD=M\n@%s\nD;JNE\n", strings.ToUpper(bc.Label)))
+	t.popStackIntoD()
+	t.write(fmt.Sprintf("@%s$%s\nD;JNE\n", t.currentFunc, strings.ToUpper(bc.Label)))
+}
+
+func (t *Translator) defineFunction(fc *command.FunctionCommand) {
+	// Function label
+	t.write(fmt.Sprintf("(%s)\n", fc.Name))
+	// Initialise local variables to 0
+	for i := 0; i < fc.Args; i++ {
+		t.write("@SP\nA=M\nM=0\n")
+		t.incrementSP()
+	}
+}
+
+func (t *Translator) callFunction(fc *command.FunctionCommand) {
+	returnLabel := fmt.Sprintf("%s$ret.%d", t.Namespace, t.returnCount)
+
+	// Push return address of caller to stack
+	t.write(fmt.Sprintf("@%s\nD=A\n", returnLabel))
+	t.pushDOntoStack()
+	// Save state of caller
+	t.saveCallerSegments()
+	// ARG = SP - 5 - fc.Args && LCL = SP
+	t.write(fmt.Sprintf("@SP\nD=M\n@%d\nD=D-A\n@%d\nD=D-A\n@%s\nM=D\n", 5, fc.Args, command.Argument.Label()))
+	// LCL = AP
+	t.write(fmt.Sprintf("@SP\nD=M\n@%s\nM=D\n", command.Local.Label()))
+	// Jump to target function
+	t.write(fmt.Sprintf("@%s\n0;JMP\n", fc.Name))
+	// Write return address label
+	t.write(fmt.Sprintf("(%s)\n", returnLabel))
+	t.returnCount = t.returnCount + 1
+}
+
+func (t *Translator) saveSingleSegment(segment command.Segment) {
+	t.write(fmt.Sprintf("@%s\nD=M\n", segment.Label()))
+	t.pushDOntoStack()
+}
+
+func (t *Translator) saveCallerSegments() {
+	t.saveSingleSegment(command.Local)
+	t.saveSingleSegment(command.Argument)
+	t.saveSingleSegment(command.This)
+	t.saveSingleSegment(command.That)
+}
+
+func (t *Translator) translateReturn() {
+	// Set temp endFrame var
+	t.write(fmt.Sprintf("@%s\nD=M\n@%s\nM=D\n", command.Local.Label(), "endFrame"))
+	// Get return address of caller
+	t.write(fmt.Sprintf("@%d\nA=D-A\nD=M\n@%s\nM=D\n", 5, "retAddr"))
+	// *ARG = pop()
+	t.popStackIntoD()
+	t.write(fmt.Sprintf("@%s\nA=M\nM=D\n", command.Argument.Label()))
+	// SP = ARG + 1
+	t.write(fmt.Sprintf("@%s\nD=M+1\n@SP\nM=D\n", command.Argument.Label()))
+	// Restore state of caller
+	t.restoreCallerSegments()
+	// Goto return address
+	t.write(fmt.Sprintf("@%s\nA=M\n0;JMP\n", "retAddr"))
+}
+
+func (t *Translator) restoreSingleSegment(segment command.Segment) {
+	t.write(fmt.Sprintf("@%s\nAM=M-1\nD=M\n@%s\nM=D\n", "endFrame", segment.Label()))
+}
+
+func (t *Translator) restoreCallerSegments() {
+	t.restoreSingleSegment(command.That)
+	t.restoreSingleSegment(command.This)
+	t.restoreSingleSegment(command.Argument)
+	t.restoreSingleSegment(command.Local)
+}
+
+func (t *Translator) popStackIntoD() {
+	t.write("@SP\nAM=M-1\nD=M\n")
+}
+
+func (t *Translator) pushDOntoStack() {
+	t.write("@SP\nA=M\nM=D\n")
+	t.incrementSP()
 }

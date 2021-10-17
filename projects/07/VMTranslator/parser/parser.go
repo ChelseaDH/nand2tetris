@@ -63,6 +63,24 @@ func Parse(line string) (command.Command, error) {
 			Label:      parts[1],
 		}, nil
 
+	case "function", "call":
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("%s command must have 2 arguments if not 'return'", commandName)
+		}
+
+		rawCommand := command.RawCommand{Typ: command.ToCommandType(commandName)}
+
+		args, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("the args argument of a %s command must be an integer", commandName)
+		}
+
+		return &command.FunctionCommand{
+			RawCommand: rawCommand,
+			Name:       parts[1],
+			Args:       args,
+		}, nil
+
 	default:
 		commandType := command.ToCommandType(commandName)
 		if commandType == -1 {

@@ -27,14 +27,18 @@ const (
 	Label
 	Goto
 	IfGoto
+	Function
+	Call
+	Return
 )
 
+var commandNames = []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto", "function", "call", "return"}
+
 func (t CommandType) String() string {
-	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto"}
-	if int(t) >= len(names) || int(t) < 0 {
+	if int(t) >= len(commandNames) || int(t) < 0 {
 		return ""
 	}
-	return names[t]
+	return commandNames[t]
 }
 
 type RawCommand struct {
@@ -62,11 +66,10 @@ const (
 )
 
 func (s Segment) String() string {
-	names := []string{"local", "argument", "this", "that", "constant", "static", "pointer", "temp"}
-	if int(s) >= len(names) || int(s) < 0 {
+	if int(s) >= len(commandNames) || int(s) < 0 {
 		return ""
 	}
-	return names[s]
+	return commandNames[s]
 }
 
 func (s Segment) Label() string {
@@ -95,7 +98,7 @@ func (m MemoryAccessCommand) String() string {
 }
 
 func ToCommandType(s string) CommandType {
-	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto"}
+	names := []string{"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", "pop", "push", "label", "goto", "if-goto", "function", "call", "return"}
 	for i := range names {
 		if names[i] == s {
 			return CommandType(i)
@@ -123,4 +126,14 @@ type BranchingCommand struct {
 
 func (b *BranchingCommand) String() string {
 	return fmt.Sprintf("%s %s", b.RawCommand.String(), strings.ToUpper(b.Label))
+}
+
+type FunctionCommand struct {
+	RawCommand
+	Name string
+	Args int
+}
+
+func (f *FunctionCommand) String() string {
+	return fmt.Sprintf("%s %s %d", f.RawCommand.String(), f.Name, f.Args)
 }

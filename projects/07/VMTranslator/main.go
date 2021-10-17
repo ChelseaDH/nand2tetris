@@ -56,6 +56,10 @@ func main() {
 		t := translator.Translator{
 			Output: outputFile,
 		}
+		err = t.Initialise()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		for _, file := range files {
 			if path.Ext(file.Name()) == ".vm" {
