@@ -1,0 +1,45 @@
+class Generation {
+    function Map evolve(Map currentGeneration) {
+        var Array currentGenerationGrid, nextGenerationGrid;
+        var Map nextGeneration;
+        var int i, aliveNeighbours, x, y, width;
+
+        let currentGenerationGrid = currentGeneration.getGrid();
+        let nextGenerationGrid = Array.new(currentGeneration.getSize());
+        let i = 0;
+        let width = currentGeneration.getWidth();
+
+        while (i < currentGeneration.getSize()) {
+            let x = Util.modulo(i, width);
+            let y = i / width;
+
+            let aliveNeighbours = currentGeneration.noOfAliveNeighbours(x, y);
+
+            /* If the current cell is alive */
+            /* It survives if it has two or three alive neighbours */
+            /* Otherwise, it dies of boredom (<2) or overpopulation (>3) */
+            if (currentGenerationGrid[i]) {
+                if (aliveNeighbours = 2 | aliveNeighbours = 3) {
+                    let nextGenerationGrid[i] = true;
+                } else {
+                    let nextGenerationGrid[i] = false;
+                }
+            }
+            else {
+                /* A dead cell is reborn if it has exactly three alive neighbours */
+                if (aliveNeighbours = 3) {
+                    let nextGenerationGrid[i] = true;
+                } else {
+                    let nextGenerationGrid[i] = false;
+                }
+            }
+
+            let i = i + 1;
+        }
+
+        let nextGeneration = Map.newWithGrid(currentGeneration.getWidth(), currentGeneration.getHeight(), nextGenerationGrid);
+
+        do currentGeneration.dispose();
+        return nextGeneration;
+    }
+}

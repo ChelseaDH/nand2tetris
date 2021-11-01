@@ -1,0 +1,118 @@
+function Generation.evolve 8
+push argument 0
+call Map.getGrid 1
+pop local 0
+push argument 0
+call Map.getSize 1
+call Array.new 1
+pop local 1
+push constant 0
+pop local 3
+push argument 0
+call Map.getWidth 1
+pop local 7
+label WHILE_EXP0
+push local 3
+push argument 0
+call Map.getSize 1
+lt
+not
+if-goto WHILE_END0
+push local 3
+push local 7
+call Util.modulo 2
+pop local 5
+push local 3
+push local 7
+call Math.divide 2
+pop local 6
+push argument 0
+push local 5
+push local 6
+call Map.noOfAliveNeighbours 3
+pop local 4
+push local 3
+push local 0
+add
+pop pointer 1
+push that 0
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push local 4
+push constant 2
+eq
+push local 4
+or
+push constant 3
+eq
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push local 3
+push local 1
+add
+push constant 0
+not
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+goto IF_END1
+label IF_FALSE1
+push local 3
+push local 1
+add
+push constant 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+label IF_END1
+goto IF_END0
+label IF_FALSE0
+push local 4
+push constant 3
+eq
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push local 3
+push local 1
+add
+push constant 0
+not
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+goto IF_END2
+label IF_FALSE2
+push local 3
+push local 1
+add
+push constant 0
+pop temp 0
+pop pointer 1
+push temp 0
+pop that 0
+label IF_END2
+label IF_END0
+push local 3
+push constant 1
+add
+pop local 3
+goto WHILE_EXP0
+label WHILE_END0
+push argument 0
+call Map.getWidth 1
+push argument 0
+call Map.getHeight 1
+push local 1
+call Map.newWithGrid 3
+pop local 2
+push argument 0
+call Map.dispose 1
+pop temp 0
+push local 2
+return

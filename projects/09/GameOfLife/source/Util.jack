@@ -1,0 +1,25 @@
+class Util {
+    static int seed;
+
+    function void setSeed(int newSeed) {
+        let seed = newSeed;
+        return;
+    }
+
+    function int rand() {
+        /* https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use */
+        let seed = Util.modulo((8121 * seed) + 28411, 32767);
+        return seed;
+    }
+
+    function int modulo(int num, int x) {
+        var int mod;
+        if((num < x) | (x = 0)) {
+            let mod = num;
+        } else {
+            let mod = num - (x * (num / x));
+        }
+
+        return mod;
+    }
+}

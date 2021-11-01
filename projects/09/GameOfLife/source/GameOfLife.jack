@@ -1,0 +1,47 @@
+class GameOfLife {
+    /* Current universe */
+    field Universe universe;
+    field int cellSize;
+    field int gridWidth;
+    field int gridHeight;
+
+    constructor GameOfLife new(int cs) {
+        let cellSize = cs;
+        let gridWidth = 512/cs;    // Number of cells that can fit in the width
+        let gridHeight = 244/cs;   // Number of cells that can fit in the height - one line of text
+        let universe = Universe.new(gridWidth, gridHeight);
+        return this;
+    }
+
+    method void runSimulation() {
+        while (true) {
+            do drawUniverse();
+            do universe.advance();
+        }
+        return;
+    }
+
+    method void drawUniverse() {
+        var int i, x, y;
+        var Map map;
+
+        do Output.moveCursor(0,0);
+        do Output.printString("Game of Life! Generation: ");
+        do Output.printInt(universe.getGenerationNumber());
+
+        let i = 0;
+        let map = universe.getMap();
+
+        while (i < map.getSize()) {
+            let x = Util.modulo(i, gridWidth);
+            let y = i / gridWidth;
+
+            do Screen.setColor(map.getCell(x, y));
+            do Screen.drawRectangle((x * cellSize), (y * cellSize) + 11, (x * cellSize) + cellSize - 1, (y * cellSize) + cellSize - 1 + 11);
+
+            let i = i + 1;
+        }
+
+        return;
+    }
+}

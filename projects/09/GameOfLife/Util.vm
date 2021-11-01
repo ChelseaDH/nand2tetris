@@ -1,0 +1,42 @@
+function Util.setSeed 0
+push argument 0
+pop static 0
+push constant 0
+return
+function Util.rand 0
+push constant 8121
+push static 0
+call Math.multiply 2
+push constant 28411
+add
+push constant 32767
+call Util.modulo 2
+pop static 0
+push static 0
+return
+function Util.modulo 1
+push argument 0
+push argument 1
+lt
+push argument 1
+push constant 0
+eq
+or
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push argument 0
+pop local 0
+goto IF_END0
+label IF_FALSE0
+push argument 0
+push argument 1
+push argument 0
+push argument 1
+call Math.divide 2
+call Math.multiply 2
+sub
+pop local 0
+label IF_END0
+push local 0
+return

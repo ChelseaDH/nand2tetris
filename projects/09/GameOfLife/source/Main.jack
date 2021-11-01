@@ -1,0 +1,13 @@
+class Main {
+   function void main() {
+      /* Create and initialise the game board */
+      var GameOfLife gameOfLife;
+      /* Change the cellSize below to change the number of cells on the screen */
+      /* Note: small numbers may cause a heap overflow and large ones cause the universe to die rather quickly! */
+      let gameOfLife = GameOfLife.new(14);
+
+      do gameOfLife.runSimulation();
+
+      return;
+   }
+}

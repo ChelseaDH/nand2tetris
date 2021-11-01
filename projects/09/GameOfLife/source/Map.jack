@@ -1,0 +1,132 @@
+class Map {
+    field Array grid;
+    field int width;
+    field int height;
+    field int size;
+
+    /* Initialise a randomly filled map of a given size */
+    constructor Map new(int w, int h) {
+        var int rand, i;
+
+        let width = w;
+        let height = h;
+        let size = width * height;
+        let grid = Array.new(size);
+
+        let i = 0;
+        while (i < size) {
+            let rand = Util.modulo(Util.rand(), 3);
+            if (rand) {
+                let grid[i] = false;
+            } else {
+                let grid[i] = true;
+            }
+
+            let i = i + 1;
+        }
+
+        return this;
+    }
+
+    /* Initialise a map with a provided grid */
+    constructor Map newWithGrid(int w, int h, Array g) {
+        let width = w;
+        let height = h;
+        let size = width * height;
+        let grid = g;
+        return this;
+    }
+
+    method int getWidth() {
+        return width;
+    }
+
+    method int getHeight() {
+        return height;
+    }
+
+    method int getSize() {
+        return size;
+    }
+
+    method Array getGrid() {
+        return grid;
+    }
+
+    method void setGrid(Array grid) {
+        let grid = grid;
+        return;
+    }
+
+    method void dispose() {
+        do grid.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /* Number of alive neighbours of a cell */
+    /* Looks at the eight cells that surround it */
+    method int noOfAliveNeighbours(int x, int y) {
+        var int count, nx, ny;
+
+        let count = 0;
+
+        /* Northwest neighbour */
+        let nx = Util.modulo(x - 1 + width, width);
+        let ny = Util.modulo(y + 1, height);
+        if (getCell(nx, ny)) {
+            let count = count + 1;
+        }
+
+        /* North neighbour */
+        let ny = Util.modulo(y + 1, height);
+        if (getCell(x, ny)) {
+            let count = count + 1;
+        }
+
+        /* Northeast neighbour */
+        let nx = Util.modulo(x + 1, width);
+        let ny = Util.modulo(y + 1, height);
+        if (getCell(nx, ny)) {
+            let count = count + 1;
+        }
+
+        /* West neighbour */
+        let nx = Util.modulo(x - 1 + width, width);
+        if (getCell(nx, y)) {
+            let count = count + 1;
+        }
+
+        /* East neighbour */
+        let nx = Util.modulo(x + 1, width);
+        if (getCell(nx, y)) {
+            let count = count + 1;
+        }
+
+        /* Southwest neighbour */
+        let nx = Util.modulo(x - 1 + width, width);
+        let ny = Util.modulo(y - 1 + width, height);
+        if (getCell(nx, ny)) {
+            let count = count + 1;
+        }
+
+        /* South neighbour */
+        let ny = Util.modulo(y - 1 + size, height);
+        if (getCell(x, ny)) {
+            let count = count + 1;
+        }
+
+        /* Southeast neighbour */
+        let nx = Util.modulo(x + 1, width);
+        let ny = Util.modulo(y - 1 + width, height);
+        if (getCell(nx, ny)) {
+            let count = count + 1;
+        }
+
+         return count;
+    }
+
+    method boolean getCell(int x, int y) {
+        return grid[x + (y * width)];
+    }
+}

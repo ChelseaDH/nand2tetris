@@ -1,0 +1,30 @@
+class Universe {
+    field int generationNumber;
+    field Map currentGeneration;
+
+    constructor Universe new(int width, int height) {
+        let currentGeneration = Map.new(width, height);
+        let generationNumber = 1;
+        return this;
+    }
+
+    method int getGenerationNumber() {
+        return generationNumber;
+    }
+
+    method int getMap() {
+        return currentGeneration;
+    }
+
+    /* Creates the next generation of the universe */
+    method void advance() {
+        let currentGeneration = Generation.evolve(currentGeneration);
+        let generationNumber = generationNumber + 1;
+        return;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+}
