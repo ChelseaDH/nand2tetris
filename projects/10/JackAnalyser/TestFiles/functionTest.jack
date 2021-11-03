@@ -1,0 +1,4 @@
+/** adds together x and y */
+function int Test(int x, int y) {
+    return x + y;
+}
