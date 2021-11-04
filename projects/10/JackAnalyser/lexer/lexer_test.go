@@ -3,7 +3,6 @@ package lexer
 import (
 	"bufio"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -11,8 +10,8 @@ import (
 )
 
 type lexerNextComp struct {
-	expectedToken token.Token
-	expectErr     bool
+	token token.Token
+	value string
 }
 
 type lexerStringTest struct {
@@ -24,22 +23,33 @@ var nextStringTests = []lexerStringTest{
 	{
 		input: "\" A broken string",
 		expectation: lexerNextComp{
-			expectedToken: nil,
-			expectErr:     true,
+			token: token.Error,
 		},
 	},
 	{
 		input: "/** A broken API block comment",
 		expectation: lexerNextComp{
-			expectedToken: nil,
-			expectErr:     true,
+			token: token.Error,
 		},
 	},
 	{
 		input: "/** A broken block comment",
 		expectation: lexerNextComp{
-			expectedToken: nil,
-			expectErr:     true,
+			token: token.Error,
+		},
+	},
+	{
+		input: "23",
+		expectation: lexerNextComp{
+			token: token.IntConst,
+			value: "23",
+		},
+	},
+	{
+		input: `"hello"`,
+		expectation: lexerNextComp{
+			token: token.StringConst,
+			value: "hello",
 		},
 	},
 }
@@ -49,17 +59,21 @@ func TestNext_String(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(test.input))
 		lexer := NewLexer(reader)
 
-		tok, err := lexer.Next()
+		tok, value, err := lexer.Next()
 
-		if !reflect.DeepEqual(tok, test.expectation.expectedToken) {
-			t.Errorf("output token %q not equal to expected token %q for %s", tok, test.expectation.expectedToken, test.input)
+		if tok != test.expectation.token {
+			t.Errorf("output token %q not equal to expected token %q for %s", tok, test.expectation.token, test.input)
 		}
 
-		if err == nil && test.expectation.expectErr {
+		if value != test.expectation.value {
+			t.Errorf("output value '%s' not equal to expected value '%s' for %s", value, test.expectation.value, test.input)
+		}
+
+		if err == nil && test.expectation.token == token.Error {
 			t.Errorf("expected an error but none returned for %s", test.input)
 		}
 
-		if err != nil && !test.expectation.expectErr {
+		if err != nil && test.expectation.token != token.Error {
 			t.Errorf("did not expect an error, but %q returned for %s", err, test.input)
 		}
 	}
@@ -75,8 +89,8 @@ var nextFileTests = []lexerFileTest{
 		filePath: "../TestFiles/invalidSymbol.jack",
 		expectations: []lexerNextComp{
 			{
-				expectedToken: nil,
-				expectErr:     true,
+				token: token.Error,
+				value: "!",
 			},
 		},
 	},
@@ -84,7 +98,7 @@ var nextFileTests = []lexerFileTest{
 		filePath: "../TestFiles/comments.jack",
 		expectations: []lexerNextComp{
 			{
-				expectedToken: &token.EndToken{},
+				token: token.End,
 			},
 		},
 	},
@@ -92,13 +106,10 @@ var nextFileTests = []lexerFileTest{
 		filePath: "../TestFiles/endOfFile.jack",
 		expectations: []lexerNextComp{
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Function,
-					Text:    "function",
-				},
+				token: token.Function,
 			},
 			{
-				expectedToken: &token.EndToken{},
+				token: token.End,
 			},
 		},
 	},
@@ -106,105 +117,70 @@ var nextFileTests = []lexerFileTest{
 		filePath: "../TestFiles/functionTest.jack",
 		expectations: []lexerNextComp{
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Function,
-					Text:    "function",
-				},
+				token: token.Function,
 			},
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Int,
-					Text:    "int",
-				},
+				token: token.Int,
 			},
 			{
-				expectedToken: &token.IdentifierToken{
-					Identifier: "Test",
-				},
+				token: token.Identifier,
+				value: "Test",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.LeftParen,
-					Text:   "(",
-				},
+				token: token.LeftParen,
+				value: "(",
 			},
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Int,
-					Text:    "int",
-				},
+				token: token.Int,
 			},
 			{
-				expectedToken: &token.IdentifierToken{
-					Identifier: "x",
-				},
+				token: token.Identifier,
+				value: "x",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.Comma,
-					Text:   ",",
-				},
+				token: token.Comma,
+				value: ",",
 			},
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Int,
-					Text:    "int",
-				},
+				token: token.Int,
 			},
 			{
-				expectErr: false,
-				expectedToken: &token.IdentifierToken{
-					Identifier: "y",
-				},
+				token: token.Identifier,
+				value: "y",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.RightParen,
-					Text:   ")",
-				},
+				token: token.RightParen,
+				value: ")",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.LeftBrace,
-					Text:   "{",
-				},
+				token: token.LeftBrace,
+				value: "{",
 			},
 			{
-				expectedToken: &token.KeywordToken{
-					Keyword: token.Return,
-					Text:    "return",
-				},
+				token: token.Return,
 			},
 			{
-				expectedToken: &token.IdentifierToken{
-					Identifier: "x",
-				},
+				token: token.Identifier,
+				value: "x",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.Plus,
-					Text:   "+",
-				},
+				token: token.Plus,
+				value: "+",
 			},
 			{
-				expectedToken: &token.IdentifierToken{
-					Identifier: "y",
-				},
+				token: token.Identifier,
+				value: "y",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.SemiColon,
-					Text:   ";",
-				},
+				token: token.SemiColon,
+				value: ";",
 			},
 			{
-				expectedToken: &token.SymbolToken{
-					Symbol: token.RightBrace,
-					Text:   "}",
-				},
+				token: token.RightBrace,
+				value: "}",
 			},
 			{
-				expectedToken: &token.EndToken{},
+				token: token.End,
 			},
 		},
 	},
@@ -219,17 +195,21 @@ func TestNext_File(t *testing.T) {
 		lexer := NewLexer(reader)
 
 		for _, expectation := range test.expectations {
-			tok, err := lexer.Next()
+			tok, value, err := lexer.Next()
 
-			if !reflect.DeepEqual(tok, expectation.expectedToken) {
-				t.Errorf("output token %q not equal to expected token %q in file %s", tok, expectation.expectedToken, test.filePath)
+			if tok != expectation.token {
+				t.Errorf("output token %q not equal to expected token %q in file %s", tok, expectation.token, test.filePath)
 			}
 
-			if err == nil && expectation.expectErr {
+			if value != expectation.value {
+				t.Errorf("output value '%s' not equal to expected value '%s' in file %s", value, expectation.value, test.filePath)
+			}
+
+			if err == nil && expectation.token == token.Error {
 				t.Errorf("expected an error but none returned in file %s", test.filePath)
 			}
 
-			if err != nil && !expectation.expectErr {
+			if err != nil && expectation.token != token.Error {
 				t.Errorf("did not expect an error, but %q returned in file %s", err, test.filePath)
 			}
 		}

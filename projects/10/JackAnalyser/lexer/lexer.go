@@ -17,23 +17,21 @@ const (
 )
 
 type Lexer struct {
-	Reader *bufio.Reader
+	reader *bufio.Reader
 
 	cr    rune // current character
 	isEOF bool
 	err   error
 }
 
-func NewLexer(input io.Reader) Lexer {
-	lexer := Lexer{
-		Reader: bufio.NewReader(input),
+func NewLexer(input io.Reader) *Lexer {
+	return &Lexer{
+		reader: bufio.NewReader(input),
 	}
-
-	return lexer
 }
 
 func (l *Lexer) nextRune() {
-	r, _, err := l.Reader.ReadRune()
+	r, _, err := l.reader.ReadRune()
 	if err != nil {
 		l.parseError(err)
 	}
@@ -49,30 +47,30 @@ func (l *Lexer) parseError(err error) {
 	}
 }
 
-func (l *Lexer) Next() (token.Token, error) {
+func (l *Lexer) Next() (token.Token, string, error) {
 	l.nextRune()
 	l.skipWhitespace()
 
 	if l.isEOF {
-		return &token.EndToken{}, nil
+		return token.End, "", nil
 	} else if l.err != nil {
-		return nil, l.err
+		return token.Error, "", l.err
 	}
 
 	// If a scan returns either nothing or false then an error occurred as a result of calling lexer.nextRune()
 	// In this case, fall though to shared error/EOF handling
 	switch {
 	case isLetter(l.cr):
-		tok := l.scanIdentifier()
-		if tok != nil {
-			return tok, nil
+		tok, value := l.scanIdentifier()
+		if tok != token.Error {
+			return tok, value, nil
 		}
 		break
 
 	case unicode.IsDigit(l.cr):
-		tok, err := l.scanNumber()
-		if tok != nil || err != nil {
-			return tok, err
+		tok, value, err := l.scanNumber()
+		if tok != token.Error || err != nil {
+			return tok, value, err
 		}
 		break
 
@@ -93,13 +91,13 @@ func (l *Lexer) Next() (token.Token, error) {
 		} else if l.cr == '*' {
 			err := l.scanBlockComment()
 			if err != nil {
-				return nil, err
+				return token.Error, "", err
 			} else {
 				return l.Next()
 			}
 		} else {
-			l.Reader.UnreadRune()
-			return &token.SymbolToken{Symbol: token.Div, Text: "/"}, nil
+			l.reader.UnreadRune()
+			return token.Div, "/", nil
 		}
 		break
 
@@ -107,38 +105,36 @@ func (l *Lexer) Next() (token.Token, error) {
 		char := string(l.cr)
 		symbol, ok := token.SymbolMap[char]
 		if ok {
-			return &token.SymbolToken{Symbol: symbol,
-				Text: char,
-			}, nil
+			return symbol, char, nil
 		}
 
-		return nil, fmt.Errorf("cannot lex %s character", char)
+		return token.Error, char, fmt.Errorf("cannot lex %s character", char)
 	}
 
 	if l.isEOF {
-		return &token.EndToken{}, nil
+		return token.End, "", nil
 	} else if l.err != nil {
-		return nil, l.err
+		return token.Error, "", l.err
 	} else {
-		return nil, errors.New("unexpected error occurred")
+		return token.Error, "", errors.New("unexpected error occurred")
 	}
 }
 
 // Looks for both keywords and identifiers.
 // Scans until the next rune that is not a letter, _, or number is found.
-func (l *Lexer) scanIdentifier() token.Token {
+func (l *Lexer) scanIdentifier() (token.Token, string) {
 	runes := []rune{l.cr}
 
 	for {
 		l.nextRune()
 		if l.err != nil {
-			return nil
+			return token.Error, ""
 		}
 
 		if isLetter(l.cr) || unicode.IsDigit(l.cr) {
 			runes = append(runes, l.cr)
 		} else {
-			l.Reader.UnreadRune()
+			l.reader.UnreadRune()
 			break
 		}
 	}
@@ -146,56 +142,54 @@ func (l *Lexer) scanIdentifier() token.Token {
 	ident := string(runes)
 	keyword, ok := token.KeywordMap[ident]
 	if ok {
-		return &token.KeywordToken{
-			Keyword: keyword,
-			Text:    ident,
-		}
+		return keyword, ""
 	}
 
-	return &token.IdentifierToken{Identifier: ident}
+	return token.Identifier, ident
 }
 
 // Scans until the next non-number is found.
 // Only accepts a number within the bounds of integerMin and integerMax.
-func (l *Lexer) scanNumber() (token.Token, error) {
+func (l *Lexer) scanNumber() (token.Token, string, error) {
 	runes := []rune{l.cr}
 
 	for {
 		l.nextRune()
 		if l.err != nil {
-			return nil, nil
+			return token.Error, "", nil
 		}
 
 		if unicode.IsDigit(l.cr) {
 			runes = append(runes, l.cr)
 		} else {
-			l.Reader.UnreadRune()
+			l.reader.UnreadRune()
 			break
 		}
 	}
 
-	n, err := strconv.Atoi(string(runes))
+	s := string(runes)
+	n, err := strconv.Atoi(s)
 	if err != nil {
-		return nil, err
+		return token.Error, "", err
 	}
 
 	if n < integerMin || n > integerMax {
-		return nil, fmt.Errorf("integer constants must be between %d and %d, %d provided", integerMin, integerMax, n)
+		return token.Error, "", fmt.Errorf("integer constants must be between %d and %d, %d provided", integerMin, integerMax, n)
 	}
 
-	return &token.IntConstToken{IntVal: n}, nil
+	return token.IntConst, s, nil
 }
 
 // Scans a string literal, discarding the quote characters at the start and end.
-func (l *Lexer) scanString() (token.Token, error) {
+func (l *Lexer) scanString() (token.Token, string, error) {
 	var runes []rune
 
 	for {
 		l.nextRune()
 		if l.isEOF {
-			return nil, errors.New("EOF found before closing quote for string literal")
+			return token.Error, "", errors.New("EOF found before closing quote for string literal")
 		} else if l.err != nil {
-			return nil, l.err
+			return token.Error, "", l.err
 		}
 
 		if l.cr == '"' {
@@ -205,14 +199,13 @@ func (l *Lexer) scanString() (token.Token, error) {
 		runes = append(runes, l.cr)
 	}
 
-	str := string(runes)
-	return &token.StringConstToken{StringVal: str}, nil
+	return token.StringConst, string(runes), nil
 }
 
 // Scans and discards runes until a newline or EOF is found.
 // Returns true if successfully found end of comment.
 func (l *Lexer) scanInLineComment() bool {
-	_, err := l.Reader.ReadBytes('\n')
+	_, err := l.reader.ReadBytes('\n')
 
 	if err != nil {
 		l.parseError(err)

@@ -72,18 +72,17 @@ func handleFile(filePath string) {
 
 	l := lexer.NewLexer(inputFile)
 	for {
-		tok, err := l.Next()
+		tok, _, err := l.Next()
 		if err != nil {
 			log.Print(err)
 			break
 		}
-		_, ok := tok.(*token.EndToken)
 
-		if ok {
+		if tok != token.End {
 			break
 		}
 
-		outputFile.WriteString(fmt.Sprintf("%s\n", tok.Xml()))
+		outputFile.WriteString(fmt.Sprintf("%s\n", tok.String()))
 	}
 	outputFile.WriteString("</tokens>\n")
 }

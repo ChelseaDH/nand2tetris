@@ -1,13 +1,17 @@
 package token
 
 import (
-	"fmt"
+	"strconv"
 )
 
-type Keyword int
+type Token int
 
 const (
-	Class Keyword = iota
+	End Token = iota
+	Error
+
+	// Keywords
+	Class
 	Constructor
 	Function
 	Method
@@ -28,9 +32,34 @@ const (
 	Else
 	While
 	Return
+
+	// Symbols
+	LeftBrace
+	RightBrace
+	LeftParen
+	RightParen
+	LeftBracket
+	RightBracket
+	Dot
+	Comma
+	SemiColon
+	Plus
+	Minus
+	Mult
+	Div
+	And
+	Or
+	LessThan
+	GreaterThan
+	Equals
+	Not
+
+	Identifier
+	IntConst
+	StringConst
 )
 
-var KeywordMap = map[string]Keyword{
+var KeywordMap = map[string]Token{
 	"class":       Class,
 	"constructor": Constructor,
 	"function":    Function,
@@ -54,31 +83,7 @@ var KeywordMap = map[string]Keyword{
 	"return":      Return,
 }
 
-type Symbol int
-
-const (
-	LeftBrace Symbol = iota
-	RightBrace
-	LeftParen
-	RightParen
-	LeftBracket
-	RightBracket
-	Dot
-	Comma
-	SemiColon
-	Plus
-	Minus
-	Mult
-	Div
-	And
-	Or
-	LessThan
-	GreaterThan
-	Equals
-	Not
-)
-
-var SymbolMap = map[string]Symbol{
+var SymbolMap = map[string]Token{
 	"{": LeftBrace,
 	"}": RightBrace,
 	"(": LeftParen,
@@ -100,52 +105,66 @@ var SymbolMap = map[string]Symbol{
 	"~": Not,
 }
 
-type Token interface {
-	Xml() string
+var tokens = [...]string{
+	// Keywords
+	Class:       "class",
+	Constructor: "constructor",
+	Function:    "function",
+	Method:      "method",
+	Field:       "field",
+	Static:      "static",
+	Var:         "var",
+	Int:         "int",
+	Char:        "char",
+	Boolean:     "boolean",
+	Void:        "void",
+	True:        "true",
+	False:       "false",
+	Null:        "null",
+	This:        "this",
+	Let:         "let",
+	Do:          "do",
+	If:          "if",
+	Else:        "else",
+	While:       "while",
+	Return:      "return",
+
+	// Symbols
+	LeftBrace:    "{",
+	RightBrace:   "}",
+	LeftParen:    "(",
+	RightParen:   ")",
+	LeftBracket:  "[",
+	RightBracket: "]",
+	Dot:          ".",
+	Comma:        ",",
+	SemiColon:    ";",
+	Plus:         "+",
+	Minus:        "-",
+	Mult:         "*",
+	Div:          "/",
+	And:          "&",
+	Or:           "|",
+	LessThan:     "<",
+	GreaterThan:  ">",
+	Equals:       "=",
+	Not:          "~",
+
+	Identifier:  "identifier",
+	IntConst:    "int constant",
+	StringConst: "string constant",
+
+	End:   "end",
+	Error: "error",
 }
 
-type KeywordToken struct {
-	Keyword Keyword
-	Text    string
+func (tok Token) String() string {
+	s := ""
+	if 0 <= tok && tok < Token(len(tokens)) {
+		s = tokens[tok]
+	}
+	if s == "" {
+		s = "token(" + strconv.Itoa(int(tok)) + ")"
+	}
+	return s
 }
-
-func (kt *KeywordToken) Xml() string {
-	return fmt.Sprintf("<keyword> %s </keyword>", kt.Text)
-}
-
-type SymbolToken struct {
-	Symbol Symbol
-	Text   string
-}
-
-func (st *SymbolToken) Xml() string {
-	return fmt.Sprintf("<symbol> %s </symbol>", st.Text)
-}
-
-type IdentifierToken struct {
-	Identifier string
-}
-
-func (it *IdentifierToken) Xml() string {
-	return fmt.Sprintf("<identifier> %s </identifier>", it.Identifier)
-}
-
-type IntConstToken struct {
-	IntVal int
-}
-
-func (it *IntConstToken) Xml() string {
-	return fmt.Sprintf("<integerConstant> %d </integerConstant>", it.IntVal)
-}
-
-type StringConstToken struct {
-	StringVal string
-}
-
-func (st *StringConstToken) Xml() string {
-	return fmt.Sprintf("<stringConstant> %s </stringConstant>", st.StringVal)
-}
-
-type EndToken struct{}
-
-func (et *EndToken) Xml() string { return "" }
