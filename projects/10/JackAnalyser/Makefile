@@ -1,4 +1,4 @@
-NAME := JackAnalyser
+NAME := JackAnalyzer
 SOURCES := $(shell find -name \*.go) go.mod
 
 $(NAME): $(SOURCES)

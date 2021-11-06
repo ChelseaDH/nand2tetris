@@ -1,0 +1,20 @@
+class test {
+    static int x, y;
+    field boolean valid;
+
+    constructor test New(int x, int y) {
+        let x = x;
+        let y = y;
+        return this;
+    }
+
+    function void testing() {
+        var boolean steve;
+        let steve = true;
+
+        while (steve) {
+
+        }
+    }
+// todo implement
+}

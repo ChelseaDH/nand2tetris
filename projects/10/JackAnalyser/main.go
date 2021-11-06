@@ -5,10 +5,9 @@ import (
 	"log"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/ChelseaDH/JackAnalyser/lexer"
-	"github.com/ChelseaDH/JackAnalyser/token"
+	"github.com/ChelseaDH/JackAnalyser/parser"
 )
 
 const inputFileExt = ".jack"
@@ -61,28 +60,12 @@ func handleFile(filePath string) {
 	}
 	defer inputFile.Close()
 
-	outputFile, err := os.OpenFile(strings.Replace(filePath, inputFileExt, outputFileExt, 1), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	p := parser.NewParser(lexer.NewLexer(inputFile))
+	class, err := p.Parse()
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	defer outputFile.Close()
 
-	outputFile.WriteString("<tokens>\n")
-
-	l := lexer.NewLexer(inputFile)
-	for {
-		tok, _, err := l.Next()
-		if err != nil {
-			log.Print(err)
-			break
-		}
-
-		if tok != token.End {
-			break
-		}
-
-		outputFile.WriteString(fmt.Sprintf("%s\n", tok.String()))
-	}
-	outputFile.WriteString("</tokens>\n")
+	log.Printf("%#v", class)
 }
