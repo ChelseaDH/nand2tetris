@@ -11,7 +11,7 @@ type Type struct {
 
 type VarDec struct {
 	Type Type
-	Name string
+	Name []string
 }
 
 type ClassVarDec struct {
@@ -39,7 +39,9 @@ type JackClass struct {
 	Subroutines []JackSubroutine
 }
 
-type Statement interface{}
+type Statement interface {
+	toXml(XmlWriter)
+}
 
 type LetStatement struct {
 	Name  string
@@ -66,7 +68,9 @@ type ReturnStatement struct {
 	Value Expression
 }
 
-type Expression interface{}
+type Expression interface {
+	toXml(XmlWriter)
+}
 
 type BinaryTerm struct {
 	Left     Expression
@@ -103,6 +107,7 @@ type SubroutineCall struct {
 	Name        string
 	SubName     string
 	Expressions []Expression
+	IsTerm      bool
 }
 
 type BracketExpression struct {

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/ChelseaDH/JackAnalyser/lexer"
 	"github.com/ChelseaDH/JackAnalyser/parser"
@@ -60,6 +61,13 @@ func handleFile(filePath string) {
 	}
 	defer inputFile.Close()
 
+	outputFile, err := os.OpenFile(strings.Replace(filePath, inputFileExt, outputFileExt, 1), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer outputFile.Close()
+
 	p := parser.NewParser(lexer.NewLexer(inputFile))
 	class, err := p.Parse()
 	if err != nil {
@@ -67,5 +75,6 @@ func handleFile(filePath string) {
 		return
 	}
 
-	log.Printf("%#v", class)
+	writer := parser.XmlWriter{Writer: outputFile}
+	class.WriteToXml(writer)
 }

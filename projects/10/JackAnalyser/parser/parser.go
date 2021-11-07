@@ -43,7 +43,7 @@ func (p *Parser) Parse() (j *JackClass, err error) {
 	var variables []ClassVarDec
 	vars := p.parseClassVarDec()
 	for vars != nil {
-		variables = append(variables, vars...)
+		variables = append(variables, *vars)
 		vars = p.parseClassVarDec()
 	}
 
@@ -97,7 +97,7 @@ func (p *Parser) parseType() Type {
 	}
 }
 
-func (p *Parser) parseClassVarDec() []ClassVarDec {
+func (p *Parser) parseClassVarDec() *ClassVarDec {
 	if !p.accept(token.Static) && !p.accept(token.Field) {
 		return nil
 	}
@@ -107,30 +107,22 @@ func (p *Parser) parseClassVarDec() []ClassVarDec {
 	p.expect(token.Identifier)
 	name := p.value
 
-	vars := []ClassVarDec{
-		{
-			Static: static,
-			VarDec: VarDec{
-				Type: typ,
-				Name: name,
-			},
+	vars := ClassVarDec{
+		Static: static,
+		VarDec: VarDec{
+			Type: typ,
+			Name: []string{name},
 		},
 	}
 
 	for p.accept(token.Comma) {
 		p.advance()
 		p.expect(token.Identifier)
-		vars = append(vars, ClassVarDec{
-			Static: static,
-			VarDec: VarDec{
-				Type: typ,
-				Name: p.value,
-			},
-		})
+		vars.VarDec.Name = append(vars.VarDec.Name, p.value)
 	}
 
 	p.expect(token.SemiColon)
-	return vars
+	return &vars
 }
 
 func (p *Parser) parseSubroutine() *JackSubroutine {
@@ -214,7 +206,7 @@ func (p *Parser) parseSubroutineBody() ([]VarDec, []Statement) {
 	var variables []VarDec
 	vars := p.parseVarDec()
 	for vars != nil {
-		variables = append(variables, vars...)
+		variables = append(variables, *vars)
 		vars = p.parseVarDec()
 	}
 
@@ -224,7 +216,7 @@ func (p *Parser) parseSubroutineBody() ([]VarDec, []Statement) {
 	return variables, statements
 }
 
-func (p *Parser) parseVarDec() []VarDec {
+func (p *Parser) parseVarDec() *VarDec {
 	if p.accept(token.Var) {
 		p.advance()
 	} else {
@@ -234,25 +226,19 @@ func (p *Parser) parseVarDec() []VarDec {
 	typ := p.parseType()
 	p.expect(token.Identifier)
 
-	vars := []VarDec{
-		{
-			Type: typ,
-			Name: p.value,
-		},
+	vars := VarDec{
+		Type: typ,
+		Name: []string{p.value},
 	}
 
 	for p.accept(token.Comma) {
 		p.advance()
 		p.expect(token.Identifier)
-		vars = append(vars, VarDec{
-			Type: typ,
-			Name: p.value,
-		},
-		)
+		vars.Name = append(vars.Name, p.value)
 	}
 
 	p.expect(token.SemiColon)
-	return vars
+	return &vars
 }
 
 func (p *Parser) parseStatement() Statement {
@@ -505,7 +491,9 @@ func (p *Parser) parseTerm() Expression {
 		}
 
 		if p.accept(token.Dot) || p.accept(token.LeftParen) {
-			return p.parseSubroutineCall()
+			call := p.parseSubroutineCall()
+			call.IsTerm = true
+			return call
 		}
 
 		return &VarName{Name: name}
