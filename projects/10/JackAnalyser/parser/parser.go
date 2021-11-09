@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ChelseaDH/JackAnalyser/lexer"
 	"github.com/ChelseaDH/JackAnalyser/token"
@@ -10,6 +11,7 @@ import (
 
 type Parser struct {
 	lexer *lexer.Lexer
+	scope string
 
 	current          token.Token
 	next             token.Token
@@ -38,6 +40,7 @@ func (p *Parser) Parse() (j *JackClass, err error) {
 	p.expect(token.Class)
 	p.expect(token.Identifier)
 	name := p.value
+	p.scope = name
 	p.expect(token.LeftBrace)
 
 	var variables []ClassVarDec
@@ -420,9 +423,9 @@ func (p *Parser) parseSubroutineCall() SubroutineCall {
 	p.expect(token.RightParen)
 
 	return SubroutineCall{
-		Name:        name,
-		SubName:     subName,
-		Expressions: expressions,
+		ClassName: name,
+		SubName:   subName,
+		Arguments: expressions,
 	}
 }
 
@@ -513,4 +516,10 @@ func (p *Parser) parseTerm() Expression {
 	default:
 		panic(fmt.Errorf("unexpected token whilst parsing term: %s", p.next))
 	}
+}
+
+func ParseExpression(input string) Expression {
+	p := NewParser(lexer.NewLexer(strings.NewReader(input)))
+	p.advance()
+	return p.parseExpression()
 }

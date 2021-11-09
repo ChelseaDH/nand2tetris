@@ -39,7 +39,9 @@ type JackClass struct {
 	Subroutines []JackSubroutine
 }
 
-type Statement interface{}
+type Statement interface{
+	toVm(classScope ClassScope, routineScope map[string]variable, writer instructionWriter)
+}
 
 type LetStatement struct {
 	Name  string
@@ -66,7 +68,9 @@ type ReturnStatement struct {
 	Value Expression
 }
 
-type Expression interface{}
+type Expression interface{
+	toVm(classScope ClassScope, routineScope map[string]variable, writer instructionWriter)
+}
 
 type BinaryTerm struct {
 	Left     Expression
@@ -100,9 +104,9 @@ type ArrayAccess struct {
 }
 
 type SubroutineCall struct {
-	Name        string
-	SubName     string
-	Expressions []Expression
+	ClassName string
+	SubName   string
+	Arguments []Expression
 }
 
 type BracketExpression struct {
