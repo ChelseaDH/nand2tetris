@@ -1,0 +1,203 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Screen.jack
+
+/**
+ * A library of functions for displaying graphics on the screen.
+ * The Hack physical screen consists of 256 rows (indexed 0..255, top to bottom)
+ * of 512 pixels each (indexed 0..511, left to right). The top left pixel on 
+ * the screen is indexed (0,0).
+ */
+class Screen {
+    static array screen;
+    static boolean color;
+
+    /** Initializes the Screen. */
+    function void init() {
+        let color = true;
+        let screen = 16384;
+
+        return;
+    }
+
+    /** Erases the entire screen. */
+    function void clearScreen() {
+        var int i;
+
+        let i = 0;
+
+        while (i < 8192) {
+            let screen[i] = 0;
+        }
+        return;
+    }
+
+    /** Sets the current color, to be used for all subsequent drawXXX commands.
+     *  Black is represented by true, white by false. */
+    function void setColor(boolean b) {
+        let color = b;
+        return;
+    }
+
+    /** Draws the (x,y) pixel, using the current color. */
+    function void drawPixel(int x, int y) {
+        var int addr, bit, word;
+
+        // Base address of word and specific bit to update
+        let addr = (32 * y) + (x / 16);
+        let bit = Math.twoToThe(x & 15);
+
+        if (color) {
+            let screen[addr] = screen[addr] | bit;
+        } else {
+            let screen[addr] = screen[addr] & (~bit);
+        }
+
+        return;
+    }
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    function void drawLine(int x1, int y1, int x2, int y2) {
+        var int x, y, dx, dy;
+        var int a, b, diff, temp, yDir;
+
+        // Make sure x and y the values of the pixel with smallest x coord
+        if (x1 > x2) {
+            let temp = x1;
+            let x1 = x2;
+            let x2 = temp;
+
+            let temp = y1;
+            let y1 = y2;
+            let y2 = temp;
+        }
+
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let diff = 0;
+
+        // Draw vertical line
+        if (dx = 0) {
+            let y = Math.min(y1, y2);
+            let dy = Math.abs(dy);
+            while (diff < dy) {
+                do Screen.drawPixel(x1, y + diff);
+                let diff = diff + 1;
+            }
+            return;
+        }
+
+        // Draw horizontal line
+        if (dy = 0) {
+            do Screen.drawHorizontalLine(x1, x2, y1);
+            return;
+        }
+
+        // Draw diagonal line
+        let a = 0;
+        let b = 0;
+
+        // Is dy positive or negative
+        if (dy < 0) {
+            let yDir = -1;
+            let dy = Math.abs(dy);
+        } else {
+            let yDir = 1;
+        }
+
+        while (~(a > dx) & ~(b > dy)) {
+            do Screen.drawPixel(x1 + a, y1 + b);
+
+            if (diff < 0) {
+                let a = a + 1;
+                let diff = diff + dy;
+            } else {
+                let b = b + yDir;
+                let diff = diff - dx;
+            }
+        }
+
+        return;
+    }
+
+    function void drawHorizontalLine(int x1, int x2, int y) {
+        var int x1Mod16, x2Mod16, startAddr, endAddr, temp;
+
+        let x1Mod16 = x1 & 15;
+        let x2Mod16 = x2 & 15;
+
+        let temp = y * 32;
+        let startAddr = temp + (x1 / 16);
+        let endAddr = temp + (x2 / 16) + (x2Mod16 = 0);
+
+        if (startAddr = endAddr) {
+            // The line starts and ends within the same word
+            do Screen.drawHorizontalLineInWord(x1, x2, y);
+        } else {
+            // If start is in middle of word
+            if (~(x1Mod16 = 0)) {
+                let startAddr = startAddr + 1;
+                do Screen.drawHorizontalLineInWord(x1, x1 + (16 - x1Mod16), y);
+            }
+
+            // If end is in middle of word
+            if (~(x2Mod16 = 0)) {
+                let endAddr = endAddr - 1;
+                do Screen.drawHorizontalLineInWord(x2 - x2Mod16, x2, y);
+            }
+
+            // Draw middle of line
+            while (~(startAddr > endAddr)) {
+                let screen[startAddr] = color;
+                let startAddr = startAddr + 1;
+            }
+        }
+
+        return;
+    }
+
+    function void drawHorizontalLineInWord(int x1, int x2, int y) {
+        while (~(x1 > x2)) {
+            do Screen.drawPixel(x1, y);
+            let x1 = x1 + 1;
+        }
+
+        return;
+    }
+
+    /** Draws a filled rectangle whose top left corner is (x1, y1)
+     * and bottom right corner is (x2,y2), using the current color. */
+    function void drawRectangle(int x1, int y1, int x2, int y2) {
+        var int y;
+
+        let y = y1;
+
+        while (y < y2) {
+            do Screen.drawHorizontalLine(x1, x2, y);
+            let y = y + 1;
+        }
+
+       return;
+    }
+
+    /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
+    function void drawCircle(int x, int y, int r) {
+        var int dy, xDiff, rSq;
+
+        if (r > 181) {
+            return;
+        }
+
+        let dy = -r;
+        let rSq = r * r;
+
+        while (~(dy > r)) {
+            let xDiff = Math.sqrt(rSq - (dy * dy));
+            do Screen.drawHorizontalLine(x - xDiff, x + xDiff, y + dy);
+            let dy = dy + 1;
+        }
+
+        return;
+    }
+}
